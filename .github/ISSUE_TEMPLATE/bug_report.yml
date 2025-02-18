@@ -29,7 +29,6 @@ body:
         2. Press Ctrl+A to select all nodes.
         3. Press Ctrl+C to copy the workflow as an XML string.
         4. Paste the resulting XML below.
-        Alternatively, drag and drop a *.bonsai file here.
       render: "xml"
         
     validations:
