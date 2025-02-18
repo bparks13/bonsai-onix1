@@ -2,7 +2,6 @@ name: Bug report
 description: Create a report to help us improve
 title: "[Bug]: "
 labels: "bug"
-assignees: ""
 
 body:
   - type: input
@@ -19,8 +18,8 @@ body:
         1. 
         2. 
         ...
-      validations:
-        required: true
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: Attach your workflow
@@ -29,5 +28,5 @@ body:
         1. Click the on the background of the top level of your Bonsai Workflow to deselect all nodes.
         2. Press Ctrl+C to copy the workflow, as an XML string.
         3. Paste the resulting XML below.
-      validations:
-        required: true
+    validations:
+      required: true
