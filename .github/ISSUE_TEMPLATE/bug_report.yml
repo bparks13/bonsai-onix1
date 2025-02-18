@@ -25,8 +25,12 @@ body:
       label: Attach your workflow
       description: |
         Please attach the workflow in which you encountered the issue below. To do so:
-        1. Click the on the background of the top level of your Bonsai Workflow to deselect all nodes.
-        2. Press Ctrl+C to copy the workflow, as an XML string.
-        3. Paste the resulting XML below.
+        1. Navigate to the top level of your Bonsai workflow.
+        2. Press Ctrl+A to select all nodes.
+        3. Press Ctrl+C to copy the workflow as an XML string.
+        4. Paste the resulting XML below.
+        Alternatively, drag and drop a *.bonsai file here.
+      render: "xml"
+        
     validations:
       required: true
