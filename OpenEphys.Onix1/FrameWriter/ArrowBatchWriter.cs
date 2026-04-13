@@ -46,7 +46,7 @@ namespace OpenEphys.Onix1.FrameWriter
             timer = new Timer(
                 callback: TimerCallback,
                 state: null,
-                dueTime: Timeout.Infinite,
+                dueTime: timeout.Milliseconds,
                 period: Timeout.Infinite);
         }
 
@@ -74,8 +74,6 @@ namespace OpenEphys.Onix1.FrameWriter
                 {
                     shouldFlush = true;
                 }
-
-                timer.Change(timeout, Timeout.InfiniteTimeSpan);
             }
 
             if (shouldFlush)
@@ -91,6 +89,8 @@ namespace OpenEphys.Onix1.FrameWriter
         {
             if (Interlocked.CompareExchange(ref flushInProgress, 1, 0) != 0)
                 return;
+
+            timer.Change(timeout, Timeout.InfiniteTimeSpan);
 
             try
             {
