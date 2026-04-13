@@ -13,7 +13,7 @@ namespace OpenEphys.Onix1.FrameWriter
         readonly Stream stream = null;
         readonly ArrowFileWriter writer = null;
 
-        private protected bool disposed = false;
+        bool disposed = false;
 
         /// <summary>
         /// Initializes a new instance of the ArrowWriter class using the specified stream.

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Apache.Arrow;
 
 namespace OpenEphys.Onix1.FrameWriter
@@ -11,9 +12,18 @@ namespace OpenEphys.Onix1.FrameWriter
     public class ArrowBatchWriter<T> : ArrowWriter
     {
         readonly int bufferSize;
-        readonly List<T> buffer;
         readonly Func<IList<T>, Schema, RecordBatch> createRecordBatch;
         readonly Schema schema;
+
+        List<T> buffer;
+
+        readonly Timer timer;
+        readonly object bufferLock = new();
+        readonly TimeSpan timeout;
+
+        int flushInProgress = 0;
+
+        volatile bool disposed = false;
 
         /// <summary>
         /// Initializes a new instance of the ArrowBatchWriter class with the specified output file, schema, buffer
@@ -22,14 +32,28 @@ namespace OpenEphys.Onix1.FrameWriter
         /// <param name="filename">The path to the output file.</param>
         /// <param name="schema">The schema describing the structure of the data.</param>
         /// <param name="bufferSize">The maximum number of items to buffer before writing a batch.</param>
+        /// <param name="timeout">The maximum time to wait before writing a batch.</param>
         /// <param name="createRecordBatch">A delegate to create a RecordBatch from a list of items and a schema.</param>
-        public ArrowBatchWriter(string filename, Schema schema, int bufferSize, Func<IList<T>, Schema, RecordBatch> createRecordBatch)
+        public ArrowBatchWriter(string filename, Schema schema, int bufferSize, TimeSpan timeout, Func<IList<T>, Schema, RecordBatch> createRecordBatch)
             : base(filename, schema)
         {
             this.schema = schema;
             this.bufferSize = bufferSize;
             buffer = new(bufferSize);
             this.createRecordBatch = createRecordBatch;
+            this.timeout = timeout;
+
+            timer = new Timer(
+                callback: TimerCallback,
+                state: null,
+                dueTime: Timeout.Infinite,
+                period: Timeout.Infinite);
+        }
+
+        void TimerCallback(object state)
+        {
+            if (disposed) return;
+            Flush();
         }
 
         /// <summary>
@@ -38,9 +62,23 @@ namespace OpenEphys.Onix1.FrameWriter
         /// <param name="item">The item to add to the buffer.</param>
         public void Write(T item)
         {
-            buffer.Add(item);
+            if (disposed) return;
 
-            if (buffer.Count >= bufferSize)
+            bool shouldFlush = false;
+
+            lock (bufferLock)
+            {
+                buffer.Add(item);
+
+                if (buffer.Count >= bufferSize)
+                {
+                    shouldFlush = true;
+                }
+
+                timer.Change(timeout, Timeout.InfiniteTimeSpan);
+            }
+
+            if (shouldFlush)
             {
                 Flush();
             }
@@ -51,11 +89,27 @@ namespace OpenEphys.Onix1.FrameWriter
         /// </summary>
         public void Flush()
         {
-            if (buffer.Count > 0)
+            if (Interlocked.CompareExchange(ref flushInProgress, 1, 0) != 0)
+                return;
+
+            try
             {
-                var recordBatch = createRecordBatch(buffer, schema);
+                List<T> snapshot;
+
+                lock (bufferLock)
+                {
+                    if (buffer.Count == 0) return;
+
+                    snapshot = buffer;
+                    buffer = new List<T>(bufferSize);
+                }
+
+                var recordBatch = createRecordBatch(snapshot, schema);
                 base.Write(recordBatch);
-                buffer.Clear();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref flushInProgress, 0);
             }
         }
 
@@ -66,8 +120,11 @@ namespace OpenEphys.Onix1.FrameWriter
         {
             if (!disposed)
             {
+                timer.Dispose();
                 Flush();
                 base.Dispose();
+
+                disposed = true;
             }
         }
     }
