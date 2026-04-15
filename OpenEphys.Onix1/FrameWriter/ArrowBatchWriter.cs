@@ -15,6 +15,8 @@ namespace OpenEphys.Onix1.FrameWriter
         readonly Func<IList<T>, Schema, RecordBatch> createRecordBatch;
         readonly Schema schema;
 
+        bool isDisposed = false;
+
         /// <summary>
         /// Initializes a new instance of the ArrowBatchWriter class with the specified output file, schema, buffer
         /// size, and record batch creation delegate.
@@ -59,16 +61,20 @@ namespace OpenEphys.Onix1.FrameWriter
             }
         }
 
-        /// <summary>
-        /// Releases resources used by the object and flushes any buffered data.
-        /// </summary>
-        public override void Dispose()
+        /// <inheritdoc/>
+        protected override void Dispose(bool disposing)
         {
-            if (!disposed)
+            if (!isDisposed)
             {
-                Flush();
-                base.Dispose();
+                isDisposed = true;
+
+                if (disposing)
+                {
+                    Flush();
+                }
             }
+
+            base.Dispose(disposing);
         }
     }
 }

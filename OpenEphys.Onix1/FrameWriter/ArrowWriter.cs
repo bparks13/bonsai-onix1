@@ -1,7 +1,8 @@
-﻿using Apache.Arrow;
-using Apache.Arrow.Ipc;
-using System;
+﻿using System;
 using System.IO;
+using System.Threading;
+using Apache.Arrow;
+using Apache.Arrow.Ipc;
 
 namespace OpenEphys.Onix1.FrameWriter
 {
@@ -13,7 +14,7 @@ namespace OpenEphys.Onix1.FrameWriter
         readonly Stream stream = null;
         readonly ArrowFileWriter writer = null;
 
-        private protected bool disposed = false;
+        int isDisposed = 0;
 
         /// <summary>
         /// Initializes a new instance of the ArrowWriter class using the specified stream.
@@ -37,22 +38,28 @@ namespace OpenEphys.Onix1.FrameWriter
         }
 
         /// <summary>
+        /// Disposes of the resources used by the instance, optionally releasing managed resources if disposing is true.
+        /// </summary>
+        /// <param name="disposing">True to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (Interlocked.CompareExchange(ref isDisposed, 1, 0) == 0)
+            {
+                if (disposing)
+                {
+                    writer?.WriteEnd();
+                    writer?.Dispose();
+                    stream?.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
         /// Releases the resources used by the instance.
         /// </summary>
-        public virtual void Dispose()
+        public void Dispose()
         {
-            if (!disposed)
-            {
-                if (writer != null)
-                {
-                    writer.WriteEnd();
-                    writer.Dispose();
-                }
-
-                stream?.Dispose();
-
-                disposed = true;
-            }
+            Dispose(true);
         }
     }
 }
