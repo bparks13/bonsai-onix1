@@ -171,21 +171,29 @@ namespace OpenEphys.Onix1.FrameWriter
         /// </returns>
         public IObservable<DataFrame> Process(IObservable<DataFrame> source)
         {
-            const int BufferSize = 50;
+
+            const int DefaultBufferSize = 50;
             Schema schema = null;
             Func<IList<DataFrame>, Schema, RecordBatch> createRecordBatch = null;
+            int bufferSize = DefaultBufferSize;
 
             return source.Replay(frames => Observable.Concat(
                 frames.Take(1)
                     .Do(frame =>
                     {
                         var frameType = frame.GetType();
+                        var sampleRateAttribute = frameType.GetCustomAttribute<ExpectedSampleRateAttribute>();
+                        if (sampleRateAttribute != null)
+                        {
+                            const double BufferDurationSeconds = 1.0;
+                            bufferSize = (int)(sampleRateAttribute.SampleRateHz * BufferDurationSeconds);
+                        }
                         var members = FrameWriterHelper.GetDataMembers(frameType);
                         schema = GenerateSchema(members, frame);
                         createRecordBatch = CreateDataFrameRecordBatchBuilder(frameType, members).Compile();
                     })
                     .IgnoreElements(),
-                Observable.Defer(() => CreateDataFrameSink(schema, createRecordBatch, BufferSize).Process(frames))
+                Observable.Defer(() => CreateDataFrameSink(schema, createRecordBatch, bufferSize).Process(frames))
             ), 1);
         }
     }
