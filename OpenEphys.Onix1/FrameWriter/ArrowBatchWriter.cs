@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Apache.Arrow;
@@ -13,7 +12,6 @@ namespace OpenEphys.Onix1.FrameWriter
     /// <typeparam name="T">The type of items to be written and batched.</typeparam>
     public sealed class ArrowBatchWriter<T> : ArrowWriter
     {
-        readonly EventLoopScheduler scheduler = new();
         readonly Subject<T> subject = new();
         readonly IDisposable subscription;
         readonly Func<IList<T>, Schema, RecordBatch> createRecordBatch;
@@ -37,7 +35,7 @@ namespace OpenEphys.Onix1.FrameWriter
             this.createRecordBatch = createRecordBatch;
 
             subscription = subject
-                .Buffer(timeout, bufferSize, scheduler)
+                .Buffer(timeout, bufferSize)
                 .Where(list => list.Count > 0)
                 .Subscribe(WriteBatch);
         }
@@ -67,9 +65,8 @@ namespace OpenEphys.Onix1.FrameWriter
                 if (disposing)
                 {
                     subject.OnCompleted();
-                    subscription?.Dispose();
+                    subscription.Dispose();
                     subject.Dispose();
-                    scheduler.Dispose();
                 }
             }
 
