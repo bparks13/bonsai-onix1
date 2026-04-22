@@ -8,7 +8,7 @@ namespace OpenEphys.Onix1.FrameWriter
     /// Provides buffered writing of items to an Arrow file, batching items before writing.
     /// </summary>
     /// <typeparam name="T">The type of items to be written and batched.</typeparam>
-    public class ArrowBatchWriter<T> : ArrowWriter
+    public sealed class ArrowBatchWriter<T> : ArrowWriter
     {
         readonly int bufferSize;
         readonly List<T> buffer;

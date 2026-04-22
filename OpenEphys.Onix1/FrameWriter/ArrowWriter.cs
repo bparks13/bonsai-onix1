@@ -47,9 +47,9 @@ namespace OpenEphys.Onix1.FrameWriter
             {
                 if (disposing)
                 {
-                    writer?.WriteEnd();
-                    writer?.Dispose();
-                    stream?.Dispose();
+                    writer.WriteEnd();
+                    writer.Dispose();
+                    stream.Dispose();
                 }
             }
         }
