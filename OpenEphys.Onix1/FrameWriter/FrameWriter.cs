@@ -18,6 +18,8 @@ namespace OpenEphys.Onix1.FrameWriter
     [WorkflowElementCategory(ElementCategory.Sink)]
     public class FrameWriter : FileSink
     {
+        const int DefaultBufferSize = 1000;
+
         BufferedDataFrameSink CreateBufferedDataFrameSink()
         {
             return new BufferedDataFrameSink
@@ -171,8 +173,6 @@ namespace OpenEphys.Onix1.FrameWriter
         /// </returns>
         public IObservable<DataFrame> Process(IObservable<DataFrame> source)
         {
-
-            const int DefaultBufferSize = 50;
             Schema schema = null;
             Func<IList<DataFrame>, Schema, RecordBatch> createRecordBatch = null;
             int bufferSize = DefaultBufferSize;
