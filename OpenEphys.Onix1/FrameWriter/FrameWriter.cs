@@ -133,6 +133,18 @@ namespace OpenEphys.Onix1.FrameWriter
                 members);
         }
 
+        static int GetBufferSize(Type frameType)
+        {
+            var sampleRateAttribute = frameType.GetCustomAttribute<ExpectedSampleRateAttribute>();
+            if (sampleRateAttribute != null)
+            {
+                const double BufferDurationSeconds = 1.0;
+                return (int)(sampleRateAttribute.SampleRateHz * BufferDurationSeconds);
+            }
+
+            return DefaultBufferSize;
+        }
+
         /// <summary>
         /// Writes all of the data frames in the sequence to an Apache Arrow file.
         /// </summary>
@@ -145,6 +157,7 @@ namespace OpenEphys.Onix1.FrameWriter
         {
             Schema schema = null;
             Func<BufferedDataFrame, Schema, RecordBatch> createRecordBatch = null;
+            int bufferSize = DefaultBufferSize;
 
             return source.Replay(frames => Observable.Concat(
                 frames.Take(1)
@@ -152,6 +165,7 @@ namespace OpenEphys.Onix1.FrameWriter
                     {
                         var frameType = frame.GetType();
                         var members = FrameWriterHelper.GetDataMembers(frameType);
+                        bufferSize = (int)Math.Ceiling((double)GetBufferSize(frameType) / frame.Clock.Length);
                         schema = GenerateSchema(members, frame);
                         createRecordBatch = CreateBufferedFrameRecordBatchBuilder(frameType, members).Compile();
                     })
@@ -182,13 +196,8 @@ namespace OpenEphys.Onix1.FrameWriter
                     .Do(frame =>
                     {
                         var frameType = frame.GetType();
-                        var sampleRateAttribute = frameType.GetCustomAttribute<ExpectedSampleRateAttribute>();
-                        if (sampleRateAttribute != null)
-                        {
-                            const double BufferDurationSeconds = 1.0;
-                            bufferSize = (int)(sampleRateAttribute.SampleRateHz * BufferDurationSeconds);
-                        }
                         var members = FrameWriterHelper.GetDataMembers(frameType);
+                        bufferSize = GetBufferSize(frameType);
                         schema = GenerateSchema(members, frame);
                         createRecordBatch = CreateDataFrameRecordBatchBuilder(frameType, members).Compile();
                     })
